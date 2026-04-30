@@ -1,0 +1,26 @@
+-- A small, hand-curated list of common English words used by the random source.
+-- Kept short on purpose -- the plugin's main mode is user-supplied texts.
+return {
+  "the", "of", "and", "to", "in", "is", "it", "that", "with", "on",
+  "for", "as", "are", "be", "this", "by", "an", "from", "or", "have",
+  "at", "but", "not", "they", "you", "all", "we", "can", "her", "his",
+  "one", "our", "their", "them", "what", "out", "if", "about", "who", "get",
+  "which", "when", "make", "like", "time", "just", "him", "know", "take", "into",
+  "year", "your", "good", "some", "could", "see", "other", "than", "then", "now",
+  "look", "only", "come", "its", "over", "think", "also", "back", "after", "use",
+  "two", "how", "work", "first", "well", "way", "even", "new", "want", "any",
+  "these", "give", "day", "most", "us", "should", "find", "here", "own", "still",
+  "name", "long", "great", "where", "much", "old", "place", "right", "before", "such",
+  "through", "while", "world", "life", "hand", "part", "child", "eye", "woman", "man",
+  "high", "small", "large", "next", "early", "young", "important", "few", "public", "bad",
+  "same", "able", "between", "another", "without", "country", "system", "group", "number", "point",
+  "house", "case", "week", "company", "fact", "lot", "right", "study", "book", "word",
+  "issue", "side", "kind", "head", "house", "service", "friend", "father", "power", "hour",
+  "game", "line", "end", "member", "law", "car", "city", "community", "president", "team",
+  "minute", "idea", "kid", "body", "information", "parent", "face", "level", "office", "door",
+  "health", "person", "art", "war", "history", "party", "result", "change", "morning", "reason",
+  "research", "girl", "guy", "moment", "air", "teacher", "force", "education", "foot", "boy",
+  "age", "policy", "process", "music", "market", "sense", "nation", "plan", "college", "interest",
+  "death", "course", "experience", "student", "voice", "week", "side", "water", "hour", "room",
+  "mother", "story", "month", "lot", "study", "state", "right", "page", "letter", "minute",
+}

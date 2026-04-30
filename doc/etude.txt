@@ -1,0 +1,157 @@
+*etude.txt*  Typing practice with resumable user-supplied texts.
+
+==============================================================================
+INTRODUCTION                                                            *etude*
+
+etude.nvim is a minimal typing-practice plugin. It opens a small floating
+window that displays a few lines of text; you type those lines, and the
+plugin colors each character green or red as you go, computes WPM and
+accuracy, and saves a tiny per-source bookmark so the next session
+continues from where you left off.
+
+The intended workflow is:
+
+1. Configure a few practice files (book chapters, code, prose -- anything
+   plain-text) via |etude.setup|.
+2. Run |:Etude| to pick a source.
+3. Type. When you finish a chunk, the bookmark advances. Re-run |:Etude|
+   tomorrow and continue from the same place.
+
+==============================================================================
+SETUP                                                              *etude-setup*
+
+>lua
+    require("etude").setup({
+      sources = {
+        { path = "~/notes/practice/sherlock.txt", name = "Sherlock" },
+        -- Set normalize = false to preserve exact bytes (useful for code):
+        { path = "~/code/snippet-pack/lua.lua",   name = "Lua tricks",
+          normalize = false },
+      },
+      width = 80,         -- floating window width
+      line_count = 3,     -- rows per chunk; toggle with 3/6/9 in-session
+      wpm_goal = 80,
+      data_file = vim.fn.stdpath("data") .. "/etude.json",
+    })
+<
+
+All fields are optional. With no `sources`, only the built-in "phrases" and
+"random" sources are available.
+
+By default, file content is normalized for typing practice: smart quotes /
+em-dashes / ellipsis / non-breaking spaces become ASCII; line breaks and tabs
+collapse to spaces; anything left outside printable ASCII is dropped. Pass
+`normalize = false` on a source to read the raw bytes instead.
+
+==============================================================================
+COMMANDS                                                        *etude-commands*
+
+                                                                    *:Etude*
+:Etude [pick|resume|stats]
+
+    With no argument or `pick`, opens a |vim.ui.select| picker listing your
+    configured sources plus the built-in "phrases" / "random" sources.
+    Choose one to begin.
+
+    `resume` re-opens the most recently practiced source (or falls back to
+    the picker if there's no history).
+
+    `stats` opens a read-only float showing lifetime averages and the last
+    5 runs.
+
+==============================================================================
+PICKER INTEGRATION                                              *etude-pickers*
+
+etude uses |vim.ui.select| exclusively. Any picker plugin that overrides
+that hook works automatically:
+
+  - dressing.nvim
+  - telescope-ui-select
+  - snacks.picker  (`require("snacks").setup{ picker = { ui_select = true } }`)
+  - mini.pick
+  - fzf-lua's ui_select
+
+If none are installed, Neovim's built-in selector is used.
+
+==============================================================================
+HIGHLIGHTS                                                  *etude-highlights*
+
+The float background, border, and cursor row are taken from the global
+|hl-Normal| group automatically -- the float matches your regular buffer.
+
+Foreground colors come from the following highlight groups (linked to
+sensible colorscheme defaults). Override any of them via `highlights = {}`
+in setup. Each value can be either a string (linked group name) or a full
+|nvim_set_hl| spec table.
+
+  Key            Default link           Used for
+  -----------    -------------------    ---------------------------------
+  pending        Comment                untyped (ghosted) text
+  correct        DiagnosticOk           correctly typed characters
+  wrong          DiagnosticError        wrongly typed characters
+  wrong_space    DiagnosticError        underscore marker for typed-space
+  header         Title                  source name in the title row
+  key            Special                key labels in the footer
+  key_active     DiagnosticOk           selected line-count digit
+  muted          Comment                key descriptions, "wpm" / "acc"
+  accent         Statement              numeric values in the footer
+
+Example: brighter pending text, custom green for correct chars: >lua
+
+    require("etude").setup({
+      highlights = {
+        pending = "Conceal",
+        correct = { fg = "#a6e3a1", bold = true },
+      },
+    })
+<
+
+==============================================================================
+KEYS IN THE PRACTICE WINDOW                                        *etude-keys*
+
+  i        Start typing (enters Insert mode at the first row).
+  <Esc>    Stop typing (returns to Normal mode); press again to close.
+  q        Close the window.
+  <C-r>    Restart the current chunk from scratch (no bookmark change).
+  <C-n>    Save progress and load the next chunk (file source only).
+  3 6 9    Set the number of rows per chunk.
+
+==============================================================================
+DATA FILE                                                       *etude-data*
+
+Stats and bookmarks are stored as plain JSON at `data_file`. Schema:
+
+>json
+    {
+      "version": 1,
+      "sources": {
+        "/abs/path/to/file.txt": {
+          "byte_offset": 1234,
+          "last_used": 1714492800
+        }
+      },
+      "recent": [
+        { "ts": ..., "source_id": ..., "source_name": ...,
+          "wpm": 65, "accuracy": 96, "duration_secs": 42, "chars": 180 }
+      ],
+      "lifetime": {
+        "runs": 0, "wpm_sum": 0, "accuracy_sum": 0,
+        "total_secs": 0, "total_chars": 0
+      }
+    }
+<
+
+The file is human-readable. You can edit/delete it freely; etude will
+recreate it next time.
+
+==============================================================================
+HEALTH CHECK                                                    *etude-health*
+
+>vim
+    :checkhealth etude
+<
+
+Validates Neovim version and that configured source files exist.
+
+==============================================================================
+vim:tw=78:ts=8:et:ft=help:norl:
