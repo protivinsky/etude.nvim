@@ -29,11 +29,15 @@ local MAX_RECENT_RUNS = 5
 ---@field total_secs number
 ---@field total_chars integer
 
+---@class etude.Prefs
+---@field line_count? integer  Last 3/6/9 selection, restored across sessions.
+
 ---@class etude.Data
 ---@field version integer
 ---@field sources table<string, etude.SourceProgress>
 ---@field recent etude.RunRecord[]
 ---@field lifetime etude.LifetimeStats
+---@field prefs etude.Prefs
 
 ---@return etude.Data
 local function fresh()
@@ -42,6 +46,7 @@ local function fresh()
     sources = {},
     recent = {},
     lifetime = { runs = 0, wpm_sum = 0, accuracy_sum = 0, total_secs = 0, total_chars = 0 },
+    prefs = {},
   }
 end
 
@@ -88,7 +93,8 @@ function M.load(path)
     return fresh()
   end
 
-  -- Defensive: ensure fields exist with the right types.
+  -- Defensive: ensure top-level tables exist. A malformed/partial file
+  -- shouldn't crash the plugin -- the data is reconstructible by typing more.
   local data = migrate(decoded)
   data.sources = data.sources or {}
   data.recent = data.recent or {}

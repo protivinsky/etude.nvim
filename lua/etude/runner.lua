@@ -191,7 +191,9 @@ local function render_header(s)
     table.insert(right_chunks, { tostring(n), s.line_count == n and "EtudeKeyActive" or "EtudeKey" })
     right_len = right_len + 1
   end
-  local pad = s.width - used - right_len - PAD
+  -- Mirror the leading PAD on the right so the line-count digits don't hug
+  -- the border. (Two PADs total: one for the left, one for the right.)
+  local pad = s.width - used - right_len - PAD * 2
   if pad < 1 then
     pad = 1
   end
@@ -271,6 +273,7 @@ local function render_footer(s)
     { " i ", "EtudeKey" }, { " start  ", "EtudeMuted" },
     { " <Esc> ", "EtudeKey" }, { " stop  ", "EtudeMuted" },
     { " <C-r> ", "EtudeKey" }, { " restart  ", "EtudeMuted" },
+    { " <C-p> ", "EtudeKey" }, { " prev  ", "EtudeMuted" },
     { " <C-n> ", "EtudeKey" }, { " next  ", "EtudeMuted" },
     { " q ", "EtudeKey" }, { " quit", "EtudeMuted" },
   }
@@ -419,6 +422,7 @@ local function set_keymaps(s)
 
   map("n", "<C-r>", function() M.restart(s) end, opts)
   map("n", "<C-n>", function() M.next_chunk(s) end, opts)
+  map("n", "<C-p>", function() M.prev_chunk(s) end, opts)
 
   for _, n in ipairs({ 3, 6, 9 }) do
     map("n", tostring(n), function() M.set_line_count(s, n) end, opts)
@@ -501,6 +505,43 @@ function M.next_chunk(s)
   M.restart(s)
 end
 
+---Step backwards by approximately one chunk. Only meaningful for file
+---sources -- random/phrases generate fresh content per chunk so "previous"
+---has no stable referent.
+---@param s etude.Session
+function M.prev_chunk(s)
+  if s.source.kind ~= "file" or not s.source.path then
+    vim.notify("etude: previous chunk is only available for file sources", vim.log.levels.INFO)
+    return
+  end
+  if s.start_byte_offset == 0 then
+    vim.notify("etude: already at the start of this source", vim.log.levels.INFO)
+    return
+  end
+
+  -- Chunks aren't exactly symmetric (wrap points depend on width and word
+  -- boundaries, and normalization may shift offsets), so step back by the
+  -- current chunk's advance as a best-effort approximation.
+  local step = math.max(s.advance, 1)
+  local target = math.max(0, s.start_byte_offset - step)
+
+  local data = data_mod.load(config.values.data_file)
+  local prog = data_mod.get_progress(data, s.source.path)
+  prog.byte_offset = target
+  prog.last_used = os.time()
+  data_mod.save(config.values.data_file, data)
+  s.start_byte_offset = target
+
+  local chunk = source_mod.chunk(s.source, target, s.width - PAD * 2, s.line_count)
+  if not chunk or #chunk.lines == 0 then
+    vim.notify("etude: no text at the previous position", vim.log.levels.WARN)
+    return
+  end
+  s.expected_lines = chunk.lines
+  s.advance = chunk.advance
+  M.restart(s)
+end
+
 ---@param s etude.Session
 ---@param n integer
 function M.set_line_count(s, n)
@@ -516,6 +557,10 @@ function M.set_line_count(s, n)
     s.expected_lines = chunk.lines
     s.advance = chunk.advance
   end
+  -- Persist as the global default for future sessions.
+  local data = data_mod.load(config.values.data_file)
+  data.prefs.line_count = n
+  data_mod.save(config.values.data_file, data)
   M.restart(s)
 end
 
@@ -533,12 +578,15 @@ function M.start(source)
 
   local cfg = config.values
   local width = cfg.width
-  local line_count = cfg.line_count
   local content_w = width - PAD * 2
+
+  -- Load data once and pull both the session-restoring prefs (line count)
+  -- and the per-source bookmark from it.
+  local data = data_mod.load(cfg.data_file)
+  local line_count = data.prefs.line_count or cfg.line_count
 
   local start_offset = 0
   if source.kind == "file" and source.path then
-    local data = data_mod.load(cfg.data_file)
     start_offset = data_mod.get_progress(data, source.path).byte_offset
   end
 
@@ -559,10 +607,17 @@ function M.start(source)
   vim.bo[buf].bufhidden = "wipe"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "etude"
+  -- Silence built-in insert-mode completion (i_CTRL-N / i_CTRL-P / omnifunc).
+  -- Third-party completion plugins (nvim-cmp, blink.cmp, coq, ...) don't
+  -- read these options -- disable those in your completion config keyed on
+  -- `vim.bo.filetype == "etude"`. See doc/etude.txt for recipes.
+  vim.bo[buf].complete = ""
+  vim.bo[buf].omnifunc = ""
 
-  -- Layout: 3 header rows (only the top one carries content, rest are spacers),
-  --         N typing rows, 1 blank spacer, 2 footer rows (stats + key hints).
-  local words_row_idx = 4
+  -- Layout: 1 header row + 1 blank spacer, N typing rows, 1 blank spacer,
+  --         2 footer rows (stats + key hints). One blank above, one below
+  --         the typing area, for symmetric breathing room.
+  local words_row_idx = 3
   local total_h = (words_row_idx - 1) + line_count + 1 + 2
 
   local ns = api.nvim_create_namespace("etude")

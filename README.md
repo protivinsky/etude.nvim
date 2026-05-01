@@ -73,8 +73,9 @@ In the practice window:
 | `<Esc>`  | Leave Insert mode (`<Esc>` again or `q` to close)     |
 | `q`      | Close                                                 |
 | `<C-r>`  | Restart current chunk                                 |
-| `<C-n>`  | Save bookmark, load next chunk                        |
-| `3/6/9`  | Set rows per chunk                                    |
+| `<C-n>`  | Save bookmark, load next chunk (file sources)         |
+| `<C-p>`  | Step back to the previous chunk (file sources)        |
+| `3/6/9`  | Set rows per chunk (persisted across sessions)        |
 
 ## Configuration
 
@@ -89,7 +90,7 @@ Defaults (all keys optional):
     -- { path = "~/notes/sherlock.txt",        name = "Sherlock" },
     -- { path = "~/snippets/lua-tricks.lua",   name = "Lua tricks", normalize = false },
   },
-  width = 80,                        -- float width in columns
+  width = 84,                        -- float width in columns (default fits the key hints row)
   line_count = 3,                    -- 3 / 6 / 9 rows per chunk
   wpm_goal = 80,
   data_file = vim.fn.stdpath("data") .. "/etude.json",
@@ -122,6 +123,27 @@ Defaults (all keys optional):
 If the pending text feels too dim, the most useful knob is `highlights.pending`
 — try `"Conceal"`, `"Whitespace"`, `"LineNr"`, or pin an exact color with
 `{ fg = "#7f848e" }`.
+
+## Disabling completion popups
+
+Etude buffers have `filetype = "etude"` and the built-in `'complete'` /
+`'omnifunc'` options cleared, but third-party completion plugins don't read
+those — disable them in *their* config keyed on the etude filetype:
+
+```lua
+-- nvim-cmp
+require("cmp").setup({
+  enabled = function() return vim.bo.filetype ~= "etude" end,
+})
+
+-- blink.cmp
+require("blink.cmp").setup({
+  enabled = function() return vim.bo.filetype ~= "etude" end,
+})
+```
+
+For mini.completion (which uses a buffer-local flag) the etude `on_attach`
+hook is the right place.
 
 ## Credits
 

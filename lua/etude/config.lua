@@ -32,7 +32,9 @@ local M = {}
 ---@type etude.UserConfig
 M.defaults = {
   sources = {},
-  width = 80,
+  -- 84 fits the full footer key hint row (~78 chars) with PAD margins on
+  -- both sides. Drop to 80 only if you don't mind "quit" hugging the border.
+  width = 84,
   line_count = 3,
   wpm_goal = 80,
   data_file = vim.fn.stdpath("data") .. "/etude.json",

@@ -74,6 +74,46 @@ that hook works automatically:
 If none are installed, Neovim's built-in selector is used.
 
 ==============================================================================
+COMPLETION PLUGINS                                          *etude-completion*
+
+Etude buffers have `filetype = "etude"` and `'complete'` / `'omnifunc'`
+emptied so Vim's built-in insert-mode completion stays silent. Third-party
+completion plugins don't read those options -- they have their own knobs
+and you'll need to disable them yourself, keyed on the etude filetype.
+
+nvim-cmp: ~
+>lua
+    require("cmp").setup({
+      enabled = function()
+        return vim.bo.filetype ~= "etude"
+      end,
+    })
+<
+
+blink.cmp: ~
+>lua
+    require("blink.cmp").setup({
+      enabled = function()
+        return vim.bo.filetype ~= "etude"
+      end,
+    })
+<
+
+mini.completion: ~
+
+The disable variable is documented at |mini.completion| as `*_disable`: >lua
+
+    require("etude").setup({
+      on_attach = function(buf)
+        vim.b[buf].minicompletion_disable = true
+      end,
+    })
+<
+
+The |etude.UserConfig| `on_attach` hook fires once per practice buffer and
+is the right place for any plugin-specific buffer-local toggles.
+
+==============================================================================
 HIGHLIGHTS                                                  *etude-highlights*
 
 The float background, border, and cursor row are taken from the global
@@ -114,7 +154,8 @@ KEYS IN THE PRACTICE WINDOW                                        *etude-keys*
   q        Close the window.
   <C-r>    Restart the current chunk from scratch (no bookmark change).
   <C-n>    Save progress and load the next chunk (file source only).
-  3 6 9    Set the number of rows per chunk.
+  <C-p>    Step back to the previous chunk (file source only).
+  3 6 9    Set the number of rows per chunk. Persists across sessions.
 
 ==============================================================================
 DATA FILE                                                       *etude-data*
